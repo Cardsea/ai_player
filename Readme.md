@@ -104,6 +104,11 @@ python Main_Game_ui.py
    - Ensure Ollama service is running (`ollama serve`)
    - Check if the model is downloaded (`ollama list`)
    - Verify the Ollama API is accessible at http://localhost:11434
+   - If you get a "port in use" error when running `ollama serve`:
+     - Check if another instance of Ollama is already running
+     - On Windows: Use Task Manager to end any running Ollama processes
+     - On macOS/Linux: Run `pkill ollama` to stop any running Ollama processes
+     - Try running `ollama serve` again
 
 2. If games don't load:
    - Verify .z5 files are present in the `games` directory
