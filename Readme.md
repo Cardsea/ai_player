@@ -2,7 +2,7 @@
 
 A Python-based GUI application that uses AI to play text adventure games like Zork. The application provides a modern interface for watching an AI play through classic text adventure games.
 
-This is a fork of the original [textplayer](https://github.com/DavidGriffith/textplayer) repository, enhanced with AI capabilities using Ollama. The original repository was designed for Python 2 and will not work with Python 3. This fork has been modified to work with Python 3 and includes additional AI features.
+This is a fork of [danielricks/textplayer](https://github.com/danielricks/textplayer), which is itself a fork of the original [DavidGriffith/textplayer](https://github.com/DavidGriffith/textplayer) repository. The original repository was designed for Python 2 and will not work with Python 3. This fork has been modified to work with Python 3 and includes additional AI features.
 
 ## Features
 
@@ -132,7 +132,7 @@ python Main_Game_ui.py
 ## Project Structure
 
 ```
-textplayer/
+ai_player/
 ├── Main_Game_ui.py    # Main GUI application
 ├── textPlayer.py      # Core game interaction logic
 ├── requirements.txt   # Python dependencies
@@ -160,9 +160,10 @@ textplayer/
 ## Credits
 
 - Original textplayer repository by [David Griffith](https://github.com/DavidGriffith/textplayer) (Python 2 version)
+- Python 2 fork by [danielricks](https://github.com/danielricks/textplayer)
 - Frotz interpreter by Stefan Jokisch
 - Ollama for providing the AI capabilities
-- This fork has been modified for Python 3 compatibility
+- This fork has been modified for Python 3 compatibility and AI features
 
 ## Contributing
 
