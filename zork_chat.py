@@ -5,6 +5,7 @@ import os
 from textPlayer import TextPlayer
 import random
 from colorama import init, Fore, Style
+import json
 
 # Initialize colorama
 init()
@@ -13,149 +14,181 @@ def chat_with_ollama(game_output, game_history):
     """
     Send game output to Ollama and get the next action.
     """
-    url = "http://localhost:11434/api/generate"
+    url = "http://localhost:11434/api/chat"
 
     # Create a context-aware prompt
-    prompt = f"""You are playing Zork, a text adventure game.
+    system_prompt = """You are playing Zork, a text adventure game.
+You are a player in the game and you are trying to solve the puzzles and find the way to navigate the world.
+You are given a description of the world and you can take actions to navigate the world.
+Common ACTIONs:
+- Directions: LOOK, N, E, S, W, U, D, NE, SE, SW, NW
+- Common: LOOK, EXAMINE, READ, INVENTORY, TAKE, DROP, OPEN, HIT, LIE DOWN, PUT _ IN _, SHOW _ TO _, GIVE _ TO _, DROP _, WAIT
+- Game: SAVE, RESTORE
+
 
 Reminders:
 - If something doesn't work, try alternate approaches or move on to something else.
 - Don't repeat the same command if the results are the same.
-- It's ok to get frustrated. When you do, step away and try something else.
-- If you find something cool, make note of it.
-- If the game doesn't understand you, try to say it more simply.
-- Use concise commands.
+- Give concise ACTIONs.
+- Please don't quit!
 
-ACTION are in plain English, using imperative sentences
-ACTION Examples:
-> NORTH
-> EAST
-> SOUTH
-> WEST
-> NORTHEAST
-> NORTHWEST
-> SOUTHEAST
-> SOUTHWEST
-> UP
-> DOWN
-> TAKE THE BIRDCAGE
-> OPEN THE PANEL
-> READ ABOUT DIMWIT FLATHEAD
-> HIT THE LAMP
-> LIE DOWN IN THE PINK SOFA
-> EXAMINE THE SHINY COIN
-> PUT THE RUSTY KEY IN THE CARDBOARD BOX
-> SHOW MY BOW TIE TO THE BOUNCER
-> HIT THE CRAWLING CRAB WITH THE GIANT NUTCRACKER
-> ASK THE COWARDLY KING ABOUT THE CROWN JEWELS
-> TAKE THE BOOK AND THE FROG
-> DROP THE JAR OF PEANUT BUTTER, THE SPOON, AND THE LEMMING FOOD
-> PUT THE EGG AND THE PENCIL IN THE CABINET
-> TURN ON THE LIGHT. KICK THE LAMP.
-> EXAMINE THE APPLE. TAKE IT. EAT IT
-> CLOSE THE HEAVY METAL DOOR. LOCK IT
-> PICK UP THE GREEN Boor. SMELL IT. PUT IT ON.
-> TAKE ALL
-> TAKE ALL THE TOOLS
-> DROP ALL THE TOOLS EXCEPT THE WRENCH AND THE MINIATURE HAMMER
-> TAKE ALL FROM THE CARTON
-> GIVE ALL BUT THE RUBY SLIPPERS TO THE WICKED WITCH
-> SALESMAN, HELLO
-> HORSE, WHERE IS YOUR SADDLE?
-> BOY, RUN HOME THEN CALL THE POLICE
-> MIGHTY WIZARD, TAKE THIS POISONED APPLE. EAT IT
+NOW: Think about what you should do next and why. Then take an action.
 
-Conversation history:
-{game_history}
-game: {game_output}
-
-Think about what you should do next and why. Then take an action.
-
-Format your response exactly like this:
-THINKING: [reasoning]
-ACTION: [command]
+You must respond with a JSON object containing:
+- thinking: A string explaining your reasoning
+- action: A string with the command to execute
 
 Example:
-THINKING: I see a sword on the ground. Taking it would be useful for combat later.
-ACTION: take sword"""
+{
+"thinking": "I see a sword on the ground. Taking it would be useful for combat later.",
+"action": "take sword"
+}"""
+
+    # Create messages array with system prompt and game history
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(game_history)
+    messages.append({"role": "user", "content": game_output}) if game_output else None
 
     data = {
-        "model": "llama3",
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "stream": False
+        "model": "llama3.2",
+        "messages": messages,
+        "stream": False,
+        "format": {
+            "type": "object",
+            "properties": {
+                "thinking": {
+                    "type": "string"
+                },
+                "action": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "thinking",
+                "action"
+            ]
+        },
+        "options": {
+            "temperature": 0.7
+        }
     }
 
     try:
         response = requests.post(url, json=data)
         response.raise_for_status()
-        content = response.json()["message"]["content"].strip()
-        
-        # Parse thinking and action
-        thinking = ""
-        action = ""
 
-        for line in content.split('\n'):
-            if line.startswith('THINKING:'):
-                thinking = line[9:].strip()
-            elif line.startswith('ACTION:'):
-                action = line[7:].strip()
+        # Get the content from the response
+        content = response.json()["message"]["content"].strip()
+
+        # Parse the JSON response
+        try:
+            result = json.loads(content)
+            thinking = result.get("thinking", "")
+            action = result.get("action", "").lower()
+            action = clean_action(action)
+        except json.JSONDecodeError as e:
+            print(f"\n{Fore.RED}Error parsing AI response as JSON: {e}{Style.RESET_ALL}")
+            print(f"{Fore.RED}Raw response was:\n{content}{Style.RESET_ALL}")
+            return None, None
+
+        # If we got nothing, print out the full response for debugging
+        if not thinking or not action:
+            print(f"\n{Fore.RED}Debug: Got empty response. Full response was:\n{content}{Style.RESET_ALL}")
 
         return thinking, action
     except requests.exceptions.RequestException as e:
         print(f"\n{Fore.RED}Error communicating with Ollama: {e}{Style.RESET_ALL}")
         return None, None
 
+def clean_action(action):
+    """
+    The AI loves to say certain patterns of words that are not valid commands.
+    This function removes those patterns.
+    """
+    action = action.strip()
+    action = action.lower()
+    action = action.replace("look around", "look")
+    action = action.replace("more", "")
+    action = action.replace("again", "")
+    action = action.replace("more closely", "")
+    action = action.replace("try", "")
+    if action == "":
+        return "look"
+    else:
+        return action.strip()
+
 def run_zork():
     print(f"{Fore.CYAN}Starting Zork...{Style.RESET_ALL}")
     print(f"{Fore.CYAN}Type 'quit' to exit the game{Style.RESET_ALL}")
-    
+
     # Initialize TextPlayer with zork1.z5
-    text_player = TextPlayer('zork1.z5')
-    
-    if not text_player.game_loaded_properly:
-        print(f"{Fore.RED}Error: Failed to load zork1.z5. Make sure it's in the textplayer/games/ directory.{Style.RESET_ALL}")
-        return
-    
+    text_player = None
     try:
-        # Get initial game output
-        game_output = text_player.run()
-        print(f"{Fore.GREEN}{game_output}{Style.RESET_ALL}")
-        
+        text_player = TextPlayer('zork1.z5')
+
+        if not text_player.game_loaded_properly:
+            print(f"{Fore.RED}Error: Failed to load zork1.z5. Make sure it's in the games/ directory.{Style.RESET_ALL}")
+            return
+
+        # Check Ollama connection first
+        if not check_ollama_connection():
+            return
+
+        MAX_HISTORY = 12  # Number of turns to keep in history
         game_history = []
         last_action_time = 0
-        
+        failure_count = 0
+
+        # Get initial game output
+        game_output = text_player.run()
+        game_history.append({"role": "user", "content": game_output})
+        print(f"{Fore.GREEN}{game_output}{Style.RESET_ALL}")
+
         while True:
             current_time = time.time()
 
             # Wait at least 0.5 seconds between actions
             if current_time - last_action_time >= 0.5:
-                # Get AI's next action
-                thinking, action = chat_with_ollama(game_output, "\n".join(game_history[-5:]))
-                
-                if thinking and action:
-                    # Send the action to the game first
-                    game_output = text_player.execute_command(action)
+                # Show thinking indicator
+                print(f"\n{Fore.YELLOW}   Thinking... {Style.RESET_ALL}", end='', flush=True)
 
-                    # Print game output first
-                    print(f"\n{Fore.GREEN}{game_output}{Style.RESET_ALL}", flush=True)
-                    print(f"\n{Fore.YELLOW}   Thinking... {Style.RESET_ALL}", end='', flush=True)
-                    # Add a random delay between 1-3 seconds to simulate thinking
-                    time.sleep(1 + random.random())
-                    # Then show AI's reasoning and action
+                # Get AI's next action
+                thinking, action = chat_with_ollama(game_output, game_history)
+
+                if thinking or action:
+                    failure_count = 0
+                    # Show AI's reasoning and action
                     print(f"{Fore.BLUE}{thinking}{Style.RESET_ALL}", flush=True)
                     print(f"{Fore.MAGENTA}   > {action}{Style.RESET_ALL}", flush=True)
                     print("\n")
-                    game_history.append(action)
+
+                    # Send the action to the game
+                    game_output = text_player.execute_command(action + ". look")
+
+                    # Print game output
+                    print(f"{Fore.GREEN}{game_output}{Style.RESET_ALL}", flush=True)
+
+                    # Add the new interaction to history
+                    game_history.append({"role": "assistant", "content": action})
+                    game_history.append({"role": "user", "content": game_output})
+
+                    # Maintain fixed-size history (in pairs of turns)
+                    while len(game_history) > MAX_HISTORY * 2:  # *2 because each turn has user and game messages
+                        game_history.pop(0)
+                        game_history.pop(0)
+
                     last_action_time = current_time
-                
+                else:
+                    game_output = "Command not understood. Try again."
+                    failure_count += 1
+                    print(f"{Fore.YELLOW}Warning: {failure_count} failed attempts to get action from Ollama, trying again...{Style.RESET_ALL}")
+                    time.sleep(failure_count)
+                    if failure_count > 5:
+                        print(f"{Fore.RED}Error: Failed to get action from Ollama{Style.RESET_ALL}")
+                        break
+
                 # Check for quit command
                 if action and action.lower().strip() == 'quit':
-                    text_player.quit()
                     break
 
     except Exception as e:
