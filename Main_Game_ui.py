@@ -6,7 +6,7 @@ from textPlayer import TextPlayer
 import random
 from colorama import init, Fore, Style
 import tkinter as tk
-from tkinter import ttk, scrolledtext, font
+from tkinter import ttk, scrolledtext
 import threading
 from queue import Queue
 import subprocess
@@ -18,87 +18,110 @@ class ZorkGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Text Adventure AI Player")
-        self.root.geometry("1000x800")
-        self.root.configure(bg='#2b2b2b')  # Dark background
+        self.root.geometry("1200x800")  # Increased initial size
         
-        # Configure styles
-        style = ttk.Style()
-        style.configure('TFrame', background='#2b2b2b')
-        style.configure('TLabel', background='#2b2b2b', foreground='#ffffff', font=('Helvetica', 10))
-        style.configure('TButton', 
-                       background='#3c3f41',
-                       foreground='#ffffff',
-                       padding=5,
-                       font=('Helvetica', 10))
-        style.configure('TCombobox',
-                       background='#3c3f41',
-                       foreground='#ffffff',
-                       fieldbackground='#3c3f41',
-                       selectbackground='#4b6eaf',
-                       selectforeground='#ffffff')
+        # Configure root window
+        self.root.configure(bg='#2C3E50')  # Dark blue background
+        self.root.option_add('*Font', 'Helvetica 12')  # Increased base font size
         
-        # Create main frame with padding
+        # Make window resizable
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+        
+        # Create main frame with padding and background
         main_frame = ttk.Frame(root, padding="20")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Create game selector with custom styling
+        # Configure main frame grid weights
+        main_frame.grid_columnconfigure(1, weight=1)
+        main_frame.grid_rowconfigure(3, weight=1)
+        
+        # Create title banner
+        title_frame = ttk.Frame(main_frame)
+        title_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 20))
+        
+        title_label = ttk.Label(
+            title_frame,
+            text="Text Adventure AI Player",
+            font=('Helvetica', 32, 'bold')  # Increased title size
+        )
+        title_label.pack()
+        
+        # Create game selector with improved styling
+        selector_frame = ttk.Frame(main_frame)
+        selector_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        
         self.game_var = tk.StringVar()
         self.game_var.set("zork1.z5")  # Default game
-        game_label = ttk.Label(main_frame, text="Select Game:", font=('Helvetica', 12, 'bold'))
-        game_label.grid(row=0, column=0, sticky=tk.W, pady=10)
+        game_label = ttk.Label(selector_frame, text="Select Game:", font=('Helvetica', 14))  # Increased label size
+        game_label.pack(side=tk.LEFT, padx=(0, 10))
         
         # Get list of games
         self.games = [f for f in os.listdir('games') if f.endswith('.z5')]
         self.games.sort()
-        game_combo = ttk.Combobox(main_frame, 
-                                textvariable=self.game_var, 
-                                values=self.games, 
-                                state="readonly",
-                                width=40)
-        game_combo.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=10, padx=10)
+        game_combo = ttk.Combobox(
+            selector_frame,
+            textvariable=self.game_var,
+            values=self.games,
+            state="readonly",
+            width=40,  # Increased width
+            font=('Helvetica', 12)  # Increased font size
+        )
+        game_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        # Create control buttons frame with custom styling
+        # Create control buttons frame with improved styling
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=0, column=2, sticky=(tk.E), padx=10)
+        button_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.E), pady=(0, 10))
         
         # Create control buttons with custom styling
-        self.start_button = ttk.Button(button_frame, 
-                                     text="Start", 
-                                     command=self.start_game,
-                                     style='Accent.TButton')
-        self.start_button.grid(row=0, column=0, padx=5)
+        button_style = {'padding': 15, 'width': 20}  # Increased padding and width
         
-        self.reset_button = ttk.Button(button_frame, 
-                                     text="Reset", 
-                                     command=self.reset_game, 
-                                     state=tk.DISABLED)
-        self.reset_button.grid(row=0, column=1, padx=5)
+        self.start_button = ttk.Button(
+            button_frame,
+            text="Start",
+            command=self.start_game,
+            style='Accent.TButton',
+            **button_style
+        )
+        self.start_button.pack(side=tk.LEFT, padx=5)
         
-        self.quit_button = ttk.Button(button_frame, 
-                                    text="Quit", 
-                                    command=self.quit_game)
-        self.quit_button.grid(row=0, column=2, padx=5)
+        self.reset_button = ttk.Button(
+            button_frame,
+            text="Reset",
+            command=self.reset_game,
+            state=tk.DISABLED,
+            **button_style
+        )
+        self.reset_button.pack(side=tk.LEFT, padx=5)
+        
+        self.quit_button = ttk.Button(
+            button_frame,
+            text="Quit",
+            command=self.quit_game,
+            **button_style
+        )
+        self.quit_button.pack(side=tk.LEFT, padx=5)
         
         # Create text display area with custom styling
         self.text_display = scrolledtext.ScrolledText(
             main_frame,
             wrap=tk.WORD,
             height=30,
-            width=80,
-            font=('Courier New', 12),
-            bg='#1e1e1e',  # Dark background
-            fg='#ffffff',  # White text
-            insertbackground='#ffffff',  # White cursor
-            selectbackground='#4b6eaf',  # Blue selection
-            selectforeground='#ffffff',  # White selected text
-            padx=10,
-            pady=10
+            width=120,
+            font=('Helvetica', 14),  # Changed to Helvetica and increased size
+            bg='#FFFFFF',  # Pure white background for better contrast
+            fg='#000000',  # Pure black text for maximum contrast
+            padx=15,
+            pady=15,
+            selectbackground='#3498DB',  # Blue selection color
+            selectforeground='#FFFFFF',  # White text when selected
+            insertbackground='#000000'  # Black cursor
         )
-        self.text_display.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+        self.text_display.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
         
-        # Configure grid weights
-        main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(1, weight=1)
+        # Create custom styles
+        style = ttk.Style()
+        style.configure('Accent.TButton', font=('Helvetica', 12, 'bold'))  # Increased button font size
         
         # Initialize game variables
         self.text_player = None
@@ -115,15 +138,7 @@ class ZorkGUI:
         try:
             while True:
                 text = self.output_queue.get_nowait()
-                # Add different colors for different types of output
-                if text.startswith("AI Reasoning:"):
-                    self.text_display.insert(tk.END, text + "\n", "reasoning")
-                elif text.startswith(">"):
-                    self.text_display.insert(tk.END, text + "\n", "command")
-                elif text.startswith("Thinking"):
-                    self.text_display.insert(tk.END, text + "\n", "thinking")
-                else:
-                    self.text_display.insert(tk.END, text + "\n", "normal")
+                self.text_display.insert(tk.END, text + "\n")
                 self.text_display.see(tk.END)
         except:
             pass
@@ -141,12 +156,6 @@ class ZorkGUI:
         
         # Clear the display
         self.text_display.delete(1.0, tk.END)
-        
-        # Configure text tags for different types of output
-        self.text_display.tag_configure("normal", foreground="#ffffff")
-        self.text_display.tag_configure("reasoning", foreground="#4b6eaf")
-        self.text_display.tag_configure("command", foreground="#6a8759")
-        self.text_display.tag_configure("thinking", foreground="#cc7832")
         
         # Start game in a separate thread
         self.game_thread = threading.Thread(target=self.run_game)
