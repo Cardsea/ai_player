@@ -26,7 +26,8 @@ You will need to install [Ollama](https://ollama.com/download).
 After it is installed run the model you wish you use:
 
 ```bash
-ollama run llama3.2
+ollama pull llama3.2
+ollama serve
 ```
 
 We also need Frotz, a Z-Machine interpreter written by Stefan Jokisch in 1995-1997. More information [here](http://frotz.sourceforge.net/).
@@ -72,65 +73,29 @@ source venv/bin/activate  # On macOS/Linux
 
 ## Usage
 
-Example commands are below.
+To run games interactively in the terminal.
+
+Ensure Ollama is running in the background:
+```bash
+ollama serve
+```
+
+Run the bash command below in the textplayer folder.
 
 ```bash
 python3 zork_chat.py
 ```
 
-To run games interactively in the terminal, run the bash command below in the textplayer folder.
+## Running the GUI Application
 
-```bash
-pip install -r requirements.txt
-```
-
-3. Install Ollama:
-   - Visit [Ollama's website](https://ollama.ai/download) to download and install for your operating system
-   - Follow the installation instructions for your specific OS
-
-4. Start Ollama service:
+Ensure Ollama is running in the background:
 ```bash
 ollama serve
 ```
 
-5. Pull the required model:
-```bash
-ollama pull llama3
-```
-
-6. Place your .z5 game files in the `games` directory:
-```bash
-mkdir games
-# Copy your .z5 game files into the games directory
-```
-
-## Running the Application
-
-1. Ensure Ollama is running in the background:
-```bash
-ollama serve
-```
-
-2. Start the application:
+Start the application:
 ```bash
 python Main_Game_ui.py
-```
-
-3. In the GUI:
-   - Select a game from the dropdown menu
-   - Click "Start" to begin AI gameplay
-   - Use "Reset" to restart the game
-   - Click "Quit" to exit the application
-
-## Project Structure
-
-```
-ai_player/
-├── Main_Game_ui.py    # Main GUI application
-├── textPlayer.py      # Core game interaction logic
-├── requirements.txt   # Python dependencies
-├── games/            # Directory for .z5 game files
-└── frotz/            # Frotz interpreter for running games
 ```
 
 ## Troubleshooting
