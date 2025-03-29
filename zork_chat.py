@@ -89,7 +89,7 @@ ACTION: take sword"""
         ],
         "stream": False
     }
-    
+
     try:
         response = requests.post(url, json=data)
         response.raise_for_status()
@@ -98,16 +98,16 @@ ACTION: take sword"""
         # Parse thinking and action
         thinking = ""
         action = ""
-        
+
         for line in content.split('\n'):
             if line.startswith('THINKING:'):
                 thinking = line[9:].strip()
             elif line.startswith('ACTION:'):
                 action = line[7:].strip()
-        
+
         return thinking, action
     except requests.exceptions.RequestException as e:
-        print(f"Error communicating with Ollama: {e}")
+        print(f"\n{Fore.RED}Error communicating with Ollama: {e}{Style.RESET_ALL}")
         return None, None
 
 def run_zork():
