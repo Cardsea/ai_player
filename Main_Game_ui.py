@@ -6,7 +6,7 @@ from textPlayer import TextPlayer
 import random
 from colorama import init, Fore, Style
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, font
 import threading
 from queue import Queue
 import subprocess
@@ -18,40 +18,82 @@ class ZorkGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Text Adventure AI Player")
-        self.root.geometry("800x600")
+        self.root.geometry("1000x800")
+        self.root.configure(bg='#2b2b2b')  # Dark background
         
-        # Create main frame
-        main_frame = ttk.Frame(root, padding="10")
+        # Configure styles
+        style = ttk.Style()
+        style.configure('TFrame', background='#2b2b2b')
+        style.configure('TLabel', background='#2b2b2b', foreground='#ffffff', font=('Helvetica', 10))
+        style.configure('TButton', 
+                       background='#3c3f41',
+                       foreground='#ffffff',
+                       padding=5,
+                       font=('Helvetica', 10))
+        style.configure('TCombobox',
+                       background='#3c3f41',
+                       foreground='#ffffff',
+                       fieldbackground='#3c3f41',
+                       selectbackground='#4b6eaf',
+                       selectforeground='#ffffff')
+        
+        # Create main frame with padding
+        main_frame = ttk.Frame(root, padding="20")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Create game selector
+        # Create game selector with custom styling
         self.game_var = tk.StringVar()
         self.game_var.set("zork1.z5")  # Default game
-        game_label = ttk.Label(main_frame, text="Select Game:")
-        game_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+        game_label = ttk.Label(main_frame, text="Select Game:", font=('Helvetica', 12, 'bold'))
+        game_label.grid(row=0, column=0, sticky=tk.W, pady=10)
         
         # Get list of games
         self.games = [f for f in os.listdir('games') if f.endswith('.z5')]
         self.games.sort()
-        game_combo = ttk.Combobox(main_frame, textvariable=self.game_var, values=self.games, state="readonly")
-        game_combo.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5)
+        game_combo = ttk.Combobox(main_frame, 
+                                textvariable=self.game_var, 
+                                values=self.games, 
+                                state="readonly",
+                                width=40)
+        game_combo.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=10, padx=10)
         
-        # Create control buttons frame
+        # Create control buttons frame with custom styling
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=0, column=2, sticky=(tk.E), padx=5)
+        button_frame.grid(row=0, column=2, sticky=(tk.E), padx=10)
         
-        # Create control buttons
-        self.start_button = ttk.Button(button_frame, text="Start", command=self.start_game)
+        # Create control buttons with custom styling
+        self.start_button = ttk.Button(button_frame, 
+                                     text="Start", 
+                                     command=self.start_game,
+                                     style='Accent.TButton')
         self.start_button.grid(row=0, column=0, padx=5)
         
-        self.reset_button = ttk.Button(button_frame, text="Reset", command=self.reset_game, state=tk.DISABLED)
+        self.reset_button = ttk.Button(button_frame, 
+                                     text="Reset", 
+                                     command=self.reset_game, 
+                                     state=tk.DISABLED)
         self.reset_button.grid(row=0, column=1, padx=5)
         
-        self.quit_button = ttk.Button(button_frame, text="Quit", command=self.quit_game)
+        self.quit_button = ttk.Button(button_frame, 
+                                    text="Quit", 
+                                    command=self.quit_game)
         self.quit_button.grid(row=0, column=2, padx=5)
         
-        # Create text display area
-        self.text_display = scrolledtext.ScrolledText(main_frame, wrap=tk.WORD, height=30, width=80)
+        # Create text display area with custom styling
+        self.text_display = scrolledtext.ScrolledText(
+            main_frame,
+            wrap=tk.WORD,
+            height=30,
+            width=80,
+            font=('Courier New', 12),
+            bg='#1e1e1e',  # Dark background
+            fg='#ffffff',  # White text
+            insertbackground='#ffffff',  # White cursor
+            selectbackground='#4b6eaf',  # Blue selection
+            selectforeground='#ffffff',  # White selected text
+            padx=10,
+            pady=10
+        )
         self.text_display.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
         
         # Configure grid weights
@@ -73,7 +115,15 @@ class ZorkGUI:
         try:
             while True:
                 text = self.output_queue.get_nowait()
-                self.text_display.insert(tk.END, text + "\n")
+                # Add different colors for different types of output
+                if text.startswith("AI Reasoning:"):
+                    self.text_display.insert(tk.END, text + "\n", "reasoning")
+                elif text.startswith(">"):
+                    self.text_display.insert(tk.END, text + "\n", "command")
+                elif text.startswith("Thinking"):
+                    self.text_display.insert(tk.END, text + "\n", "thinking")
+                else:
+                    self.text_display.insert(tk.END, text + "\n", "normal")
                 self.text_display.see(tk.END)
         except:
             pass
@@ -91,6 +141,12 @@ class ZorkGUI:
         
         # Clear the display
         self.text_display.delete(1.0, tk.END)
+        
+        # Configure text tags for different types of output
+        self.text_display.tag_configure("normal", foreground="#ffffff")
+        self.text_display.tag_configure("reasoning", foreground="#4b6eaf")
+        self.text_display.tag_configure("command", foreground="#6a8759")
+        self.text_display.tag_configure("thinking", foreground="#cc7832")
         
         # Start game in a separate thread
         self.game_thread = threading.Thread(target=self.run_game)
