@@ -131,7 +131,7 @@ def run_zork():
         
         while True:
             current_time = time.time()
-            
+
             # Wait at least 0.5 seconds between actions
             if current_time - last_action_time >= 0.5:
                 # Get AI's next action
@@ -140,6 +140,7 @@ def run_zork():
                 if thinking and action:
                     # Send the action to the game first
                     game_output = text_player.execute_command(action)
+
                     # Print game output first
                     print(f"\n{Fore.GREEN}{game_output}{Style.RESET_ALL}", flush=True)
                     print(f"\n{Fore.YELLOW}   Thinking... {Style.RESET_ALL}", end='', flush=True)
@@ -156,10 +157,39 @@ def run_zork():
                 if action and action.lower().strip() == 'quit':
                     text_player.quit()
                     break
-                
+
     except Exception as e:
         print(f"{Fore.RED}Error running Zork: {e}{Style.RESET_ALL}")
-        text_player.quit()
+    finally:
+        # Ensure TextPlayer is properly cleaned up
+        if text_player:
+            text_player.quit()
+
+def check_ollama_connection():
+    """
+    Check if Ollama is running and the llama3.2 model is installed.
+    Returns True if everything is ready, False otherwise.
+    """
+    try:
+        model_check = requests.get("http://localhost:11434/api/tags")
+        model_check.raise_for_status()
+        models = model_check.json().get("models", [])
+        if not any(model.get("name", "").startswith("llama3.2") for model in models):
+            print(f"\n{Fore.RED}Error: The llama3.2 model is not installed.{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}To fix this:{Style.RESET_ALL}")
+            print("1. Make sure Ollama is running (ollama serve)")
+            print("2. In a separate terminal, run: ollama pull llama3.2")
+            print("3. Then try running this script again\n")
+            return False
+        return True
+    except requests.exceptions.RequestException as e:
+        print(f"\n{Fore.RED}Error: Could not connect to Ollama. Please make sure Ollama is installed and running.{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}To fix this:{Style.RESET_ALL}")
+        print("1. Install Ollama from https://ollama.com/download")
+        print("2. Start Ollama by running: ollama serve")
+        print("3. In a separate terminal, run: ollama pull llama3.2")
+        print("4. Then try running this script again\n")
+        return False
 
 if __name__ == "__main__":
-    run_zork() 
+    run_zork()
