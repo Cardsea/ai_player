@@ -13,28 +13,61 @@ def chat_with_ollama(game_output, game_history):
     """
     Send game output to Ollama and get the next action.
     """
-    url = "http://localhost:11434/api/chat"
-    
+    url = "http://localhost:11434/api/generate"
+
     # Create a context-aware prompt
-    prompt = f"""You are playing Zork, a text adventure game. Here is the current game output:
+    prompt = f"""You are playing Zork, a text adventure game.
 
-{game_output}
-
-Previous actions taken:
-{game_history}
-
-General Instructions:
+Reminders:
 - If something doesn't work, try alternate approaches or move on to something else.
-- Don't say "AGAIN" in your commands, just say the command.
-- Explore the game.
-- If the game says you can't do something or that it doesn't understand, don't try to do it again.
+- Don't repeat the same command if the results are the same.
+- It's ok to get frustrated. When you do, step away and try something else.
+- If you find something cool, make note of it.
+- If the game doesn't understand you, try to say it more simply.
+- Use concise commands.
 
-ACTION syntax rules:
-- Commands are in plain English, using imperative sentences
-- Directions can be abbreviated: N, S, E, W, NE, NW, SE, SW, U, D
-- Use "ALL" to refer to every visible object
-- Multiple commands can be chained with "THEN" or "."
-- Basic commands: LOOK (L), INVENTORY (I)
+ACTION are in plain English, using imperative sentences
+ACTION Examples:
+> NORTH
+> EAST
+> SOUTH
+> WEST
+> NORTHEAST
+> NORTHWEST
+> SOUTHEAST
+> SOUTHWEST
+> UP
+> DOWN
+> TAKE THE BIRDCAGE
+> OPEN THE PANEL
+> READ ABOUT DIMWIT FLATHEAD
+> HIT THE LAMP
+> LIE DOWN IN THE PINK SOFA
+> EXAMINE THE SHINY COIN
+> PUT THE RUSTY KEY IN THE CARDBOARD BOX
+> SHOW MY BOW TIE TO THE BOUNCER
+> HIT THE CRAWLING CRAB WITH THE GIANT NUTCRACKER
+> ASK THE COWARDLY KING ABOUT THE CROWN JEWELS
+> TAKE THE BOOK AND THE FROG
+> DROP THE JAR OF PEANUT BUTTER, THE SPOON, AND THE LEMMING FOOD
+> PUT THE EGG AND THE PENCIL IN THE CABINET
+> TURN ON THE LIGHT. KICK THE LAMP.
+> EXAMINE THE APPLE. TAKE IT. EAT IT
+> CLOSE THE HEAVY METAL DOOR. LOCK IT
+> PICK UP THE GREEN Boor. SMELL IT. PUT IT ON.
+> TAKE ALL
+> TAKE ALL THE TOOLS
+> DROP ALL THE TOOLS EXCEPT THE WRENCH AND THE MINIATURE HAMMER
+> TAKE ALL FROM THE CARTON
+> GIVE ALL BUT THE RUBY SLIPPERS TO THE WICKED WITCH
+> SALESMAN, HELLO
+> HORSE, WHERE IS YOUR SADDLE?
+> BOY, RUN HOME THEN CALL THE POLICE
+> MIGHTY WIZARD, TAKE THIS POISONED APPLE. EAT IT
+
+Conversation history:
+{game_history}
+game: {game_output}
 
 Think about what you should do next and why. Then take an action.
 
