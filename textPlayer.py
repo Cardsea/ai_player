@@ -37,7 +37,7 @@ class TextPlayer:
 		if self.game_loaded_properly == True:
 
 			# Start the game process with both 'standard in' and 'standard out' pipes
-			self.game_process = Popen(['./frotz/dfrotz', 'games/' + self.game_filename], stdin=PIPE, stdout=PIPE, bufsize=1)
+			self.game_process = Popen(['./frotz/dfrotz', 'games/' + self.game_filename], stdin=PIPE, stdout=PIPE)
 
 			# Create Queue object
 			self.output_queue = Queue()
@@ -92,7 +92,7 @@ class TextPlayer:
 			self.game_process.stdin.write(b'score\n')
 			self.game_process.stdin.flush()
 			command_output = self.get_command_output()
-			score_pattern = '[0-9]+ [\(total ]*[points ]*[out ]*of [a maximum of ]*[a possible ]*[0-9]+'
+			score_pattern = r'[0-9]+ [(]total [points ]*[out ]*of [a maximum of ]*[a possible ]*[0-9]+'
 			matchObj = re.search(score_pattern, command_output, re.M|re.I)
 			if matchObj != None:
 				score_words = matchObj.group().split(' ')
@@ -102,7 +102,7 @@ class TextPlayer:
 
 	# Remove score and move information from output
 	def clean_command_output(self, text):
-		regex_list = ['[0-9]+/[0-9+]', 'Score:[ ]*[-]*[0-9]+', 'Moves:[ ]*[0-9]+', 'Turns:[ ]*[0-9]+', '[0-9]+:[0-9]+ [AaPp][Mm]', ' [0-9]+ \.'] # that last one is just for murderer.z5
+		regex_list = ['[0-9]+/[0-9+]', 'Score:[ ]*[-]*[0-9]+', 'Moves:[ ]*[0-9]+', 'Turns:[ ]*[0-9]+', '[0-9]+:[0-9]+ [AaPp][Mm]', r' [0-9]+ \.'] # that last one is just for murderer.z5
 		for regex in regex_list:
 			matchObj = re.search(regex, text, re.M|re.I)
 			if matchObj != None:
