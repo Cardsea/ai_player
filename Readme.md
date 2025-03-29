@@ -85,6 +85,7 @@ pip install -r requirements.txt
 ```
 
 3. Install Ollama:
+<<<<<<< HEAD
    - **macOS**:
      ```bash
      curl https://ollama.ai/install.sh | sh
@@ -94,6 +95,10 @@ pip install -r requirements.txt
      curl https://ollama.ai/install.sh | sh
      ```
    - **Windows**: Download and install from [Ollama's website](https://ollama.ai/download)
+=======
+   - Visit [Ollama's website](https://ollama.ai/download) to download and install for your operating system
+   - Follow the installation instructions for your specific OS
+>>>>>>> 3608239 (Update Readme.md to simplify Ollama installation instructions by consolidating OS-specific steps into a single directive for clarity.)
 
 4. Start Ollama service:
 ```bash
