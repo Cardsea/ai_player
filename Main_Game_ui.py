@@ -227,7 +227,9 @@ class ZorkGUI:
                 while True:
                     try:
                         line = output_queue.get_nowait()
-                        output += line
+                        # Filter out score and moves information
+                        if not any(x in line for x in ['Score:', 'Moves:', 'Score: 0', 'Moves: 0']):
+                            output += line
                     except:
                         break
                 return output.replace('\n', ' ').replace('>', ' ').replace('<', ' ').strip()
