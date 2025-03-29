@@ -1,7 +1,5 @@
 import requests
 import time
-import sys
-import os
 from textPlayer import TextPlayer
 import random
 from colorama import init, Fore, Style
