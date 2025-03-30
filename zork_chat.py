@@ -18,20 +18,15 @@ def chat_with_ollama(game_output, game_history, last_look):
 
     # Create a context-aware prompt
     system_prompt = """You are playing Zork, a text adventure game.
-You are a player trying to solve the puzzles and navigate the world
-
-Common ACTIONs:
-- Directions: LOOK, N, E, S, W, U, D, NE, SE, SW, NW
-- Common: LOOK, EXAMINE, READ, INVENTORY, TAKE, DROP, OPEN, HIT, LIE DOWN, PUT _ IN _, SHOW _ TO _, GIVE _ TO _, DROP _, WAIT
-- Game: SAVE, RESTORE
+You are a player trying to solve the puzzles and navigate the world.
 
 Reminders:
 - If something doesn't work, try alternate approaches or move on to something else.
 - Don't repeat the same command if the results are the same.
-- Give concise ACTIONs.
-- Please don't quit!
-
-{last_look}
+- Be concise.
+- Direction ACTIONs: N, E, S, W, UP, DOWN, NE, SE, SW, NW
+- Common ACTIONs: LOOK, EXAMINE, READ, INVENTORY, TAKE, DROP, OPEN, HIT, LIE DOWN, PUT _ IN _, SHOW _ TO _, GIVE _ TO _, DROP _, WAIT
+- BANNED ACTIONs: SAVE, RESTORE, QUIT
 
 NOW: Think about what you should do next and why. Then take an action.
 
@@ -42,7 +37,8 @@ You must respond with a JSON object. Example:
     # Create messages array with system prompt and game history
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(game_history)
-    messages.append({"role": "user", "content": game_output}) if game_output else None
+    messages.append({"role": "user", "content": last_look}) if last_look and last_look != game_output else None
+    messages.append({"role": "user", "content": game_output})
 
     data = {
         "model": "llama3.2",
@@ -114,6 +110,75 @@ def clean_action(action):
     else:
         return action.strip()
 
+def run_game_loop(text_player):
+    """
+    Run the main game loop, handling AI interactions and game state.
+    Returns True if the game should continue, False if it should end.
+    """
+    MAX_HISTORY = 12  # Number of turns to keep in history
+    last_action_time = 0
+    failure_count = 0
+    last_look = ""
+    game_history = []
+
+    # Get initial game output
+    game_output = text_player.run()
+    game_history.append({"role": "user", "content": game_output})
+    print(f"{Fore.GREEN}{game_output}{Style.RESET_ALL}")
+
+    while True:
+        current_time = time.time()
+
+        # Wait at least 0.5 seconds between actions
+        if current_time - last_action_time >= 0.5:
+            # Show thinking indicator
+            print(f"\n{Fore.YELLOW}   Thinking... {Style.RESET_ALL}", end='', flush=True)
+
+            # Get AI's next action
+            thinking, action = chat_with_ollama(game_output, game_history, last_look)
+
+            if thinking or action:
+                failure_count = 0
+                # Show AI's reasoning and action
+                print(f"{Fore.BLUE}{thinking}{Style.RESET_ALL}", flush=True)
+                print(f"{Fore.MAGENTA}   > {action}{Style.RESET_ALL}", flush=True)
+                print("\n")
+
+                # Send the action to the game
+                game_output = text_player.execute_command(action)
+
+                # Zork shortens the descriptions of rooms after the first time you look around.
+                # We're going to record the current room and send it to Ollama
+                last_look = text_player.execute_command("look")
+
+                # Print game output
+                print(f"{Fore.GREEN}{game_output}{Style.RESET_ALL}", flush=True)
+
+                # Add the new interaction to history
+                game_history.append({"role": "assistant", "content": action})
+                game_history.append({"role": "user", "content": game_output})
+
+                # Maintain fixed-size history (in pairs of turns)
+                while len(game_history) > MAX_HISTORY * 2:  # *2 because each turn has user and game messages
+                    game_history.pop(0)
+                    game_history.pop(0)
+
+                last_action_time = current_time
+            else:
+                game_output = "Command not understood. Try again."
+                failure_count += 1
+                print(f"{Fore.YELLOW}Warning: {failure_count} failed attempts to get action from Ollama, trying again...{Style.RESET_ALL}")
+                time.sleep(failure_count)
+                if failure_count > 5:
+                    print(f"{Fore.RED}Error: Failed to get action from Ollama{Style.RESET_ALL}")
+                    return False
+
+            # Check for quit command
+            if action and action.lower().strip() == 'quit':
+                return False
+
+    return True
+
 def run_zork():
     print(f"{Fore.CYAN}Starting Zork...{Style.RESET_ALL}")
     print(f"{Fore.CYAN}Type 'quit' to exit the game{Style.RESET_ALL}")
@@ -131,68 +196,8 @@ def run_zork():
         if not check_ollama_connection():
             return
 
-        MAX_HISTORY = 12  # Number of turns to keep in history
-        game_history = []
-        last_action_time = 0
-        failure_count = 0
-        last_look = ""
-
-        # Get initial game output
-        game_output = text_player.run()
-        game_history.append({"role": "user", "content": game_output})
-        print(f"{Fore.GREEN}{game_output}{Style.RESET_ALL}")
-
-        while True:
-            current_time = time.time()
-
-            # Wait at least 0.5 seconds between actions
-            if current_time - last_action_time >= 0.5:
-                # Show thinking indicator
-                print(f"\n{Fore.YELLOW}   Thinking... {Style.RESET_ALL}", end='', flush=True)
-
-                # Get AI's next action
-                thinking, action = chat_with_ollama(game_output, game_history, last_look)
-
-                if thinking or action:
-                    failure_count = 0
-                    # Show AI's reasoning and action
-                    print(f"{Fore.BLUE}{thinking}{Style.RESET_ALL}", flush=True)
-                    print(f"{Fore.MAGENTA}   > {action}{Style.RESET_ALL}", flush=True)
-                    print("\n")
-
-                    # Send the action to the game
-                    game_output = text_player.execute_command(action)
-
-                    # Zork shortens the descriptions of rooms after the first time you look around.
-                    # We're going to record the current room and send it to Ollama
-                    last_look = text_player.execute_command("look")
-
-
-                    # Print game output
-                    print(f"{Fore.GREEN}{game_output}{Style.RESET_ALL}", flush=True)
-
-                    # Add the new interaction to history
-                    game_history.append({"role": "assistant", "content": action})
-                    game_history.append({"role": "user", "content": game_output})
-
-                    # Maintain fixed-size history (in pairs of turns)
-                    while len(game_history) > MAX_HISTORY * 2:  # *2 because each turn has user and game messages
-                        game_history.pop(0)
-                        game_history.pop(0)
-
-                    last_action_time = current_time
-                else:
-                    game_output = "Command not understood. Try again."
-                    failure_count += 1
-                    print(f"{Fore.YELLOW}Warning: {failure_count} failed attempts to get action from Ollama, trying again...{Style.RESET_ALL}")
-                    time.sleep(failure_count)
-                    if failure_count > 5:
-                        print(f"{Fore.RED}Error: Failed to get action from Ollama{Style.RESET_ALL}")
-                        break
-
-                # Check for quit command
-                if action and action.lower().strip() == 'quit':
-                    break
+        # Run the main game loop
+        run_game_loop(text_player)
 
     except Exception as e:
         print(f"{Fore.RED}Error running Zork: {e}{Style.RESET_ALL}")

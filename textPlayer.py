@@ -98,7 +98,7 @@ class TextPlayer:
 				score_words = matchObj.group().split(' ')
 				return int(score_words[0]), int(score_words[len(score_words)-1])
 		return None
-			
+
 
 	# Remove score and move information from output
 	def clean_command_output(self, text):
@@ -116,15 +116,16 @@ class TextPlayer:
 
 		# While there is still output in the queue
 		while (output_continues):
-			try: 
+			try:
 				line = self.output_queue.get(timeout=.001)
 			except Empty:
 				output_continues = False
 			else:
 				command_output += line
 
-		# Clean up the output
-		command_output = command_output.replace('\n', ' ').replace('>', ' ').replace('<', ' ')
+		# Clean up the output but preserve newlines
+		command_output = command_output.replace('\n\n', '\n').replace('>', ' ').replace('<', ' ')
+		# Only replace multiple spaces with a single space, but preserve newlines
 		while '  ' in command_output:
 			command_output = command_output.replace('  ', ' ')
 
@@ -139,4 +140,3 @@ class TextPlayer:
 		if self.game_process.stdin != None:
 			self.game_process.stdin.write(b'n\n')
 			self.game_process.stdin.flush()
-
