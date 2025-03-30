@@ -533,7 +533,7 @@ ACTION: take sword"""
     try:
         response = requests.post(url, json=data)
         response.raise_for_status()
-            content = response.json()["message"]["content"].strip()
+        content = response.json()["message"]["content"].strip()
         
         # Parse thinking and action
         thinking = ""
