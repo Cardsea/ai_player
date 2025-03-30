@@ -1,7 +1,6 @@
 import requests
 import time
 from textPlayer import TextPlayer
-import random
 from colorama import init, Fore, Style
 import json
 
