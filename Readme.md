@@ -2,6 +2,8 @@
 
 A Python-based GUI application that uses AI to play text adventure games like Zork. The application provides a modern interface for watching an AI play through classic text adventure games.
 
+For Update Logs and more projects by me, check out the website!: [Cardsea.github.io](Cardsea.github.io/projects)
+
 This is a fork of [danielricks/textplayer](https://github.com/danielricks/textplayer), which is itself a fork of the original [DavidGriffith/textplayer](https://github.com/DavidGriffith/textplayer) repository. The original repository was designed for Python 2 and will not work with Python 3. This fork has been modified to work with Python 3 and includes additional AI features.
 
 ## Features
