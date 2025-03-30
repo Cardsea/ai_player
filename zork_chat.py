@@ -10,7 +10,7 @@ import json
 # Initialize colorama
 init()
 
-def chat_with_ollama(game_output, game_history):
+def chat_with_ollama(game_output, game_history, last_look):
     """
     Send game output to Ollama and get the next action.
     """
@@ -18,13 +18,12 @@ def chat_with_ollama(game_output, game_history):
 
     # Create a context-aware prompt
     system_prompt = """You are playing Zork, a text adventure game.
-You are a player in the game and you are trying to solve the puzzles and find the way to navigate the world.
-You are given a description of the world and you can take actions to navigate the world.
+You are a player trying to solve the puzzles and navigate the world
+
 Common ACTIONs:
 - Directions: LOOK, N, E, S, W, U, D, NE, SE, SW, NW
 - Common: LOOK, EXAMINE, READ, INVENTORY, TAKE, DROP, OPEN, HIT, LIE DOWN, PUT _ IN _, SHOW _ TO _, GIVE _ TO _, DROP _, WAIT
 - Game: SAVE, RESTORE
-
 
 Reminders:
 - If something doesn't work, try alternate approaches or move on to something else.
@@ -32,17 +31,13 @@ Reminders:
 - Give concise ACTIONs.
 - Please don't quit!
 
+{last_look}
+
 NOW: Think about what you should do next and why. Then take an action.
 
-You must respond with a JSON object containing:
-- thinking: A string explaining your reasoning
-- action: A string with the command to execute
-
-Example:
-{
-"thinking": "I see a sword on the ground. Taking it would be useful for combat later.",
-"action": "take sword"
-}"""
+You must respond with a JSON object. Example:
+{ "thinking": "I see a sword on the ground. Taking it would be useful for combat later.", "action": "take sword" }
+"""
 
     # Create messages array with system prompt and game history
     messages = [{"role": "system", "content": system_prompt}]
@@ -57,9 +52,11 @@ Example:
             "type": "object",
             "properties": {
                 "thinking": {
+                    "description": "A string explaining your reasoning",
                     "type": "string"
                 },
                 "action": {
+                    "description": "A string with the command to execute",
                     "type": "string"
                 }
             },
@@ -138,6 +135,7 @@ def run_zork():
         game_history = []
         last_action_time = 0
         failure_count = 0
+        last_look = ""
 
         # Get initial game output
         game_output = text_player.run()
@@ -153,7 +151,7 @@ def run_zork():
                 print(f"\n{Fore.YELLOW}   Thinking... {Style.RESET_ALL}", end='', flush=True)
 
                 # Get AI's next action
-                thinking, action = chat_with_ollama(game_output, game_history)
+                thinking, action = chat_with_ollama(game_output, game_history, last_look)
 
                 if thinking or action:
                     failure_count = 0
@@ -163,7 +161,12 @@ def run_zork():
                     print("\n")
 
                     # Send the action to the game
-                    game_output = text_player.execute_command(action + ". look")
+                    game_output = text_player.execute_command(action)
+
+                    # Zork shortens the descriptions of rooms after the first time you look around.
+                    # We're going to record the current room and send it to Ollama
+                    last_look = text_player.execute_command("look")
+
 
                     # Print game output
                     print(f"{Fore.GREEN}{game_output}{Style.RESET_ALL}", flush=True)
