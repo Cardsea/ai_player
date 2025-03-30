@@ -318,6 +318,14 @@ class MainWindow(QMainWindow):
         if self.is_running:
             return
             
+        # Check if Ollama is running and start it if needed
+        try:
+            response = requests.get("http://localhost:11434/api/version")
+            if response.status_code != 200:
+                self.start_ollama_server()
+        except requests.exceptions.ConnectionError:
+            self.start_ollama_server()
+            
         self.is_running = True
         self.start_button.setEnabled(False)
         self.reset_button.setEnabled(True)
@@ -329,6 +337,19 @@ class MainWindow(QMainWindow):
         self.game_thread = threading.Thread(target=self.run_game)
         self.game_thread.daemon = True
         self.game_thread.start()
+    
+    def start_ollama_server(self):
+        """Start the Ollama server in a separate process"""
+        try:
+            # Check if Ollama is already running
+            subprocess.run(['pgrep', 'ollama'], check=True, capture_output=True)
+        except subprocess.CalledProcessError:
+            # Start Ollama server
+            subprocess.Popen(['ollama', 'serve'], 
+                           stdout=subprocess.PIPE, 
+                           stderr=subprocess.PIPE)
+            # Wait for server to start
+            time.sleep(2)
     
     def reset_game(self):
         """Reset the current game"""
