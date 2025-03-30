@@ -5,13 +5,97 @@ from textPlayer import TextPlayer
 import random
 from colorama import init, Fore, Style
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import scrolledtext, colorchooser, ttk
 import threading
 from queue import Queue
 import subprocess
 
 # Initialize colorama
 init()
+
+class CustomThemeWindow:
+    def __init__(self, parent, app):
+        self.window = tk.Toplevel(parent)
+        self.window.title("Custom Theme")
+        self.window.geometry("400x600")
+        self.app = app
+        
+        # Create main frame
+        main_frame = tk.Frame(self.window, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Color settings
+        self.colors = {
+            'window_bg': tk.StringVar(value=app.window_bg),
+            'text_bg': tk.StringVar(value=app.text_bg),
+            'text_fg': tk.StringVar(value=app.text_fg),
+            'thinking_color': tk.StringVar(value=app.thinking_color),
+            'ai_response_color': tk.StringVar(value=app.ai_response_color),
+            'game_output_color': tk.StringVar(value=app.game_output_color),
+            'button_bg': tk.StringVar(value=app.button_bg),
+            'button_fg': tk.StringVar(value=app.button_fg),
+            'button_active_bg': tk.StringVar(value=app.button_active_bg),
+            'button_active_fg': tk.StringVar(value=app.button_active_fg)
+        }
+        
+        # Create color pickers
+        self.create_color_picker(main_frame, "Window Background", self.colors['window_bg'])
+        self.create_color_picker(main_frame, "Text Background", self.colors['text_bg'])
+        self.create_color_picker(main_frame, "Text Color", self.colors['text_fg'])
+        self.create_color_picker(main_frame, "'Thinking' Text Color", self.colors['thinking_color'])
+        self.create_color_picker(main_frame, "AI Response Color", self.colors['ai_response_color'])
+        self.create_color_picker(main_frame, "Game Output Color", self.colors['game_output_color'])
+        self.create_color_picker(main_frame, "Button Background", self.colors['button_bg'])
+        self.create_color_picker(main_frame, "Button Text Color", self.colors['button_fg'])
+        self.create_color_picker(main_frame, "Button Active Background", self.colors['button_active_bg'])
+        self.create_color_picker(main_frame, "Button Active Text Color", self.colors['button_active_fg'])
+        
+        # Preview button
+        preview_button = tk.Button(
+            main_frame,
+            text="Preview Theme",
+            command=self.preview_theme
+        )
+        preview_button.pack(pady=10)
+        
+        # Save button
+        save_button = tk.Button(
+            main_frame,
+            text="Save Theme",
+            command=self.save_theme
+        )
+        save_button.pack(pady=10)
+        
+        # Make window modal
+        self.window.transient(parent)
+        self.window.grab_set()
+    
+    def create_color_picker(self, parent, label, color_var):
+        frame = tk.Frame(parent)
+        frame.pack(fill=tk.X, pady=5)
+        
+        tk.Label(frame, text=label).pack(side=tk.LEFT)
+        
+        # Create color preview
+        preview = tk.Frame(frame, width=30, height=20, bg=color_var.get())
+        preview.pack(side=tk.RIGHT, padx=5)
+        
+        def choose_color():
+            color = colorchooser.askcolor(color=color_var.get(), title=f"Choose {label}")[1]
+            if color:
+                color_var.set(color)
+                preview.configure(bg=color)
+        
+        tk.Button(frame, text="Choose", command=choose_color).pack(side=tk.RIGHT)
+    
+    def preview_theme(self):
+        """Apply the current color settings as a preview"""
+        self.app.apply_custom_theme(self.colors)
+    
+    def save_theme(self):
+        """Save the custom theme and close window"""
+        self.app.save_custom_theme(self.colors)
+        self.window.destroy()
 
 class SettingsWindow:
     def __init__(self, parent, app):
@@ -21,13 +105,13 @@ class SettingsWindow:
         self.app = app
         
         # Create main frame with scrollbar
-        main_frame = ttk.Frame(self.window)
+        main_frame = tk.Frame(self.window)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
         # Create canvas and scrollbar
         canvas = tk.Canvas(main_frame)
-        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
+        scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
         
         scrollable_frame.bind(
             "<Configure>",
@@ -42,17 +126,17 @@ class SettingsWindow:
         canvas.pack(side="left", fill="both", expand=True)
         
         # Game Settings Section
-        game_frame = ttk.LabelFrame(scrollable_frame, text="Game Settings", padding="10")
+        game_frame = tk.LabelFrame(scrollable_frame, text="Game Settings", padding="10")
         game_frame.pack(fill=tk.X, pady=5)
         
         # Wait time control
-        wait_frame = ttk.Frame(game_frame)
+        wait_frame = tk.Frame(game_frame)
         wait_frame.pack(fill=tk.X, pady=5)
-        wait_label = ttk.Label(wait_frame, text="AI Thinking Time (seconds):", font=('Helvetica', 12))
+        wait_label = tk.Label(wait_frame, text="AI Thinking Time (seconds):", font=('Helvetica', 12))
         wait_label.pack(side=tk.LEFT, padx=(0, 10))
         
         self.wait_time = tk.DoubleVar(value=app.current_wait_time)
-        wait_scale = ttk.Scale(
+        wait_scale = tk.Scale(
             wait_frame,
             from_=0.5,
             to=5.0,
@@ -62,17 +146,17 @@ class SettingsWindow:
         )
         wait_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         
-        wait_value = ttk.Label(wait_frame, textvariable=self.wait_time, font=('Helvetica', 12))
+        wait_value = tk.Label(wait_frame, textvariable=self.wait_time, font=('Helvetica', 12))
         wait_value.pack(side=tk.LEFT)
         
         # History size control
-        history_frame = ttk.Frame(game_frame)
+        history_frame = tk.Frame(game_frame)
         history_frame.pack(fill=tk.X, pady=5)
-        history_label = ttk.Label(history_frame, text="Game History Size:", font=('Helvetica', 12))
+        history_label = tk.Label(history_frame, text="Game History Size:", font=('Helvetica', 12))
         history_label.pack(side=tk.LEFT, padx=(0, 10))
         
         self.history_size = tk.IntVar(value=app.max_history_size)
-        history_scale = ttk.Scale(
+        history_scale = tk.Scale(
             history_frame,
             from_=5,
             to=20,
@@ -82,21 +166,21 @@ class SettingsWindow:
         )
         history_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         
-        history_value = ttk.Label(history_frame, textvariable=self.history_size, font=('Helvetica', 12))
+        history_value = tk.Label(history_frame, textvariable=self.history_size, font=('Helvetica', 12))
         history_value.pack(side=tk.LEFT)
         
         # Display Settings Section
-        display_frame = ttk.LabelFrame(scrollable_frame, text="Display Settings", padding="10")
+        display_frame = tk.LabelFrame(scrollable_frame, text="Display Settings", padding="10")
         display_frame.pack(fill=tk.X, pady=5)
         
         # Font size control
-        font_frame = ttk.Frame(display_frame)
+        font_frame = tk.Frame(display_frame)
         font_frame.pack(fill=tk.X, pady=5)
-        font_label = ttk.Label(font_frame, text="Text Size:", font=('Helvetica', 12))
+        font_label = tk.Label(font_frame, text="Text Size:", font=('Helvetica', 12))
         font_label.pack(side=tk.LEFT, padx=(0, 10))
         
         self.font_size = tk.IntVar(value=app.font_size)
-        font_scale = ttk.Scale(
+        font_scale = tk.Scale(
             font_frame,
             from_=10,
             to=20,
@@ -106,39 +190,22 @@ class SettingsWindow:
         )
         font_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         
-        font_value = ttk.Label(font_frame, textvariable=self.font_size, font=('Helvetica', 12))
+        font_value = tk.Label(font_frame, textvariable=self.font_size, font=('Helvetica', 12))
         font_value.pack(side=tk.LEFT)
         
-        # Theme selection
-        theme_frame = ttk.Frame(display_frame)
-        theme_frame.pack(fill=tk.X, pady=5)
-        theme_label = ttk.Label(theme_frame, text="Theme:", font=('Helvetica', 12))
-        theme_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        self.theme_var = tk.StringVar(value=app.current_theme)
-        themes = ['Light', 'Dark', 'Classic']
-        theme_combo = ttk.Combobox(
-            theme_frame,
-            textvariable=self.theme_var,
-            values=themes,
-            state="readonly",
-            width=15
-        )
-        theme_combo.pack(side=tk.LEFT)
-        
         # AI Settings Section
-        ai_frame = ttk.LabelFrame(scrollable_frame, text="AI Settings", padding="10")
+        ai_frame = tk.LabelFrame(scrollable_frame, text="AI Settings", padding="10")
         ai_frame.pack(fill=tk.X, pady=5)
         
         # Model selection
-        model_frame = ttk.Frame(ai_frame)
+        model_frame = tk.Frame(ai_frame)
         model_frame.pack(fill=tk.X, pady=5)
-        model_label = ttk.Label(model_frame, text="AI Model:", font=('Helvetica', 12))
+        model_label = tk.Label(model_frame, text="AI Model:", font=('Helvetica', 12))
         model_label.pack(side=tk.LEFT, padx=(0, 10))
         
         self.model_var = tk.StringVar(value=app.ai_model)
         models = ['llama3', 'mistral', 'codellama']
-        model_combo = ttk.Combobox(
+        model_combo = tk.Combobox(
             model_frame,
             textvariable=self.model_var,
             values=models,
@@ -148,13 +215,13 @@ class SettingsWindow:
         model_combo.pack(side=tk.LEFT)
         
         # Temperature control
-        temp_frame = ttk.Frame(ai_frame)
+        temp_frame = tk.Frame(ai_frame)
         temp_frame.pack(fill=tk.X, pady=5)
-        temp_label = ttk.Label(temp_frame, text="AI Creativity:", font=('Helvetica', 12))
+        temp_label = tk.Label(temp_frame, text="AI Creativity:", font=('Helvetica', 12))
         temp_label.pack(side=tk.LEFT, padx=(0, 10))
         
         self.temperature = tk.DoubleVar(value=app.ai_temperature)
-        temp_scale = ttk.Scale(
+        temp_scale = tk.Scale(
             temp_frame,
             from_=0.1,
             to=1.0,
@@ -164,15 +231,14 @@ class SettingsWindow:
         )
         temp_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         
-        temp_value = ttk.Label(temp_frame, textvariable=self.temperature, font=('Helvetica', 12))
+        temp_value = tk.Label(temp_frame, textvariable=self.temperature, font=('Helvetica', 12))
         temp_value.pack(side=tk.LEFT)
         
         # Save button
-        save_button = ttk.Button(
+        save_button = tk.Button(
             scrollable_frame,
             text="Save Settings",
-            command=self.save_settings,
-            style='Accent.TButton'
+            command=self.save_settings
         )
         save_button.pack(pady=20)
         
@@ -201,15 +267,11 @@ class SettingsWindow:
         self.app.current_wait_time = self.wait_time.get()
         self.app.max_history_size = self.history_size.get()
         self.app.font_size = self.font_size.get()
-        self.app.current_theme = self.theme_var.get()
         self.app.ai_model = self.model_var.get()
         self.app.ai_temperature = self.temperature.get()
         
         # Apply font size
         self.app.text_display.configure(font=('Helvetica', self.app.font_size))
-        
-        # Apply theme
-        self.app.apply_theme()
         
         self.window.destroy()
 
@@ -223,20 +285,51 @@ class ZorkGUI:
         self.current_wait_time = 1.0
         self.max_history_size = 10
         self.font_size = 14
-        self.current_theme = 'Light'
         self.ai_model = 'llama3'
         self.ai_temperature = 0.7
         
+        # Set up colors
+        self.window_bg = '#1A1A1A'  # Soft black
+        self.text_bg = '#1A1A1A'    # Same as window
+        self.text_fg = '#E0E0E0'    # Soft white
+        self.thinking_color = '#D4B483'  # Dark yellow
+        self.ai_response_color = '#9B6B9E'  # Dark purple
+        self.game_output_color = '#7A9B7A'  # Dark green
+        
         # Configure root window
-        self.root.configure(bg='#2C3E50')
+        self.root.configure(bg=self.window_bg)
         self.root.option_add('*Font', 'Helvetica 12')
+        
+        # Configure ttk styles
+        style = ttk.Style()
+        style.configure('TFrame', background=self.window_bg)
+        style.configure('TLabel', background=self.window_bg, foreground=self.text_fg)
+        style.configure('TButton', 
+                       background=self.window_bg,
+                       foreground=self.text_fg,
+                       padding=5)
+        style.configure('TCombobox',
+                       fieldbackground=self.window_bg,
+                       background=self.window_bg,
+                       foreground=self.text_fg,
+                       selectbackground=self.ai_response_color,
+                       selectforeground=self.text_fg)
+        style.configure('TScale',
+                       background=self.window_bg,
+                       foreground=self.text_fg)
+        style.configure('TLabelframe',
+                       background=self.window_bg,
+                       foreground=self.text_fg)
+        style.configure('TLabelframe.Label',
+                       background=self.window_bg,
+                       foreground=self.text_fg)
         
         # Make window resizable
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
         
         # Create main frame with padding and background
-        main_frame = ttk.Frame(root, padding="20")
+        main_frame = ttk.Frame(root, padding=20)
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configure main frame grid weights
@@ -254,7 +347,7 @@ class ZorkGUI:
         )
         title_label.pack()
         
-        # Create game selector with improved styling
+        # Create game selector
         selector_frame = ttk.Frame(main_frame)
         selector_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         
@@ -276,19 +369,15 @@ class ZorkGUI:
         )
         game_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        # Create control buttons frame with improved styling
+        # Create control buttons frame
         button_frame = ttk.Frame(main_frame)
         button_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.E), pady=(0, 10))
         
-        # Create control buttons with custom styling
-        button_style = {'padding': 15, 'width': 20}
-        
+        # Create control buttons
         self.start_button = ttk.Button(
             button_frame,
             text="Start",
-            command=self.start_game,
-            style='Accent.TButton',
-            **button_style
+            command=self.start_game
         )
         self.start_button.pack(side=tk.LEFT, padx=5)
         
@@ -296,47 +385,40 @@ class ZorkGUI:
             button_frame,
             text="Reset",
             command=self.reset_game,
-            state=tk.DISABLED,
-            **button_style
+            state=tk.DISABLED
         )
         self.reset_button.pack(side=tk.LEFT, padx=5)
         
         self.settings_button = ttk.Button(
             button_frame,
             text="Settings",
-            command=self.open_settings,
-            **button_style
+            command=self.open_settings
         )
         self.settings_button.pack(side=tk.LEFT, padx=5)
         
         self.quit_button = ttk.Button(
             button_frame,
             text="Quit",
-            command=self.quit_game,
-            **button_style
+            command=self.quit_game
         )
         self.quit_button.pack(side=tk.LEFT, padx=5)
         
-        # Create text display area with custom styling
+        # Create text display area
         self.text_display = scrolledtext.ScrolledText(
             main_frame,
             wrap=tk.WORD,
             height=30,
             width=120,
             font=('Helvetica', self.font_size),
-            bg='#FFFFFF',
-            fg='#000000',
+            bg=self.text_bg,
+            fg=self.text_fg,
             padx=15,
             pady=15,
-            selectbackground='#3498DB',
-            selectforeground='#FFFFFF',
-            insertbackground='#000000'
+            selectbackground=self.ai_response_color,
+            selectforeground=self.text_fg,
+            insertbackground=self.text_fg
         )
         self.text_display.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
-        
-        # Create custom styles
-        style = ttk.Style()
-        style.configure('Accent.TButton', font=('Helvetica', 12, 'bold'))
         
         # Initialize game variables
         self.text_player = None
@@ -345,39 +427,39 @@ class ZorkGUI:
         self.output_queue = Queue()
         self.game_process = None
         
+        # Configure text tags
+        self.text_display.tag_configure("thinking", foreground=self.thinking_color)
+        self.text_display.tag_configure("ai_response", foreground=self.ai_response_color)
+        self.text_display.tag_configure("game_output", foreground=self.game_output_color)
+        
         # Start checking for output updates
         self.check_output_queue()
-        
-        # Apply initial theme
-        self.apply_theme()
-    
-    def apply_theme(self):
-        """Apply the selected theme to the GUI"""
-        if self.current_theme == 'Light':
-            self.text_display.configure(bg='#FFFFFF', fg='#000000')
-            self.root.configure(bg='#F0F0F0')
-        elif self.current_theme == 'Dark':
-            self.text_display.configure(bg='#2C3E50', fg='#ECF0F1')
-            self.root.configure(bg='#1A1A1A')
-        else:  # Classic
-            self.text_display.configure(bg='#FFFFFF', fg='#000000')
-            self.root.configure(bg='#E8E8E8')
-    
-    def open_settings(self):
-        """Open the settings window"""
-        SettingsWindow(self.root, self)
     
     def check_output_queue(self):
         """Check for new output in the queue and update the display"""
         try:
             while True:
                 text = self.output_queue.get_nowait()
-                self.text_display.insert(tk.END, text + "\n")
+                if "AI Reasoning:" in text:
+                    self.text_display.insert(tk.END, text + "\n", "thinking")
+                elif text.startswith(">"):
+                    self.text_display.insert(tk.END, text + "\n", "ai_response")
+                else:
+                    self.text_display.insert(tk.END, text + "\n", "game_output")
                 self.text_display.see(tk.END)
+                
+                # Configure tags for different text types
+                self.text_display.tag_configure("thinking", foreground=self.thinking_color)
+                self.text_display.tag_configure("ai_response", foreground=self.ai_response_color)
+                self.text_display.tag_configure("game_output", foreground=self.game_output_color)
         except:
             pass
         finally:
             self.root.after(100, self.check_output_queue)
+    
+    def open_settings(self):
+        """Open the settings window"""
+        SettingsWindow(self.root, self)
     
     def start_game(self):
         """Start a new game"""
