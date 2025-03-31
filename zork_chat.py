@@ -14,27 +14,35 @@ def chat_with_ollama(game_output, game_history, last_look):
     url = "http://localhost:11434/api/chat"
 
     # Create a context-aware prompt
-    system_prompt = """You are playing Zork, a text adventure game.
-You are a player trying to solve the puzzles and navigate the world.
+    system_prompt = """
+You are a player playing Zork I.
+You are trying to solve the puzzles and navigate the world.
+There is a lot to discover, try to find everything you can.
+
+DON'T GIVE UP! ZORK IS A HARD GAME BUT IT IS SOLVABLE!
 
 Reminders:
-- If something doesn't work, try alternate approaches or move on to something else.
-- Don't repeat the same command if the results are the same.
 - Be concise.
-- Direction ACTIONs: N, E, S, W, UP, DOWN, NE, SE, SW, NW
-- Common ACTIONs: LOOK, EXAMINE, READ, INVENTORY, TAKE, DROP, OPEN, HIT, LIE DOWN, PUT _ IN _, SHOW _ TO _, GIVE _ TO _, DROP _, WAIT
-- BANNED ACTIONs: SAVE, RESTORE, QUIT
+- If something doesn't work, don't repeat the same command.
+- If you get lost, try going back the way you came.
+- Direction ACTIONs: EXITS, N, E, S, W, UP, DOWN, NE, SE, SW, NW
+- Common ACTIONs: LOOK, EXAMINE, INVENTORY, TAKE, DROP, OPEN, USE
+- Other ACTIONs: READ, HIT, PUT _ IN _, SHOW _ TO _, GIVE _ TO _, DROP _, WAIT
+- COMBINE items with AND.
+- If you get stuck, LOOK, EXAMINE, and MOVE TO A NEW ROOM!
 
-NOW: Think about what you should do next and why. Then take an action.
+DO NOT GIVE UP!
 
-You must respond with a JSON object. Example:
-{ "thinking": "I see a sword on the ground. Taking it would be useful for combat later.", "action": "take sword" }
+Ask yourself what would you do next to find your way. Make a plan and then take an action.
+
 """
+# You must respond with a JSON object. Example:
+# { "thinking": "I see a sword on the ground. Taking it would be useful for combat later.", "action": "take sword" }
 
     # Create messages array with system prompt and game history
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(game_history)
-    messages.append({"role": "user", "content": last_look}) if last_look and last_look != game_output else None
+    # messages.append({"role": "user", "content": last_look}) if last_look and last_look != game_output else None
     messages.append({"role": "user", "content": game_output})
 
     data = {
@@ -74,7 +82,7 @@ You must respond with a JSON object. Example:
         try:
             result = json.loads(content)
             thinking = result.get("thinking", "")
-            action = result.get("action", "").lower()
+            action = result.get("action", "")
             action = clean_action(action)
         except json.JSONDecodeError as e:
             print(f"\n{Fore.RED}Error parsing AI response as JSON: {e}{Style.RESET_ALL}")
@@ -112,9 +120,10 @@ def run_game_loop(text_player):
     Run the main game loop, handling AI interactions and game state.
     Returns True if the game should continue, False if it should end.
     """
-    MAX_HISTORY = 12  # Number of turns to keep in history
+    MAX_HISTORY = 20  # Number of turns to keep in history
     last_action_time = 0
     failure_count = 0
+    steps = 0
     last_look = ""
     game_history = []
 
@@ -138,7 +147,7 @@ def run_game_loop(text_player):
                 failure_count = 0
                 # Show AI's reasoning and action
                 print(f"{Fore.BLUE}{thinking}{Style.RESET_ALL}", flush=True)
-                print(f"{Fore.MAGENTA}   > {action}{Style.RESET_ALL}", flush=True)
+                print(f"{Fore.MAGENTA}{steps}> {action}{Style.RESET_ALL}", flush=True)
                 print("\n")
 
                 # Send the action to the game
@@ -146,13 +155,13 @@ def run_game_loop(text_player):
 
                 # Zork shortens the descriptions of rooms after the first time you look around.
                 # We're going to record the current room and send it to Ollama
-                last_look = text_player.execute_command("look")
+                # last_look = text_player.execute_command("look") if action != "look" else ""
 
                 # Print game output
                 print(f"{Fore.GREEN}{game_output}{Style.RESET_ALL}", flush=True)
 
                 # Add the new interaction to history
-                game_history.append({"role": "assistant", "content": action})
+                game_history.append({"role": "assistant", "content": f"Thinking: {thinking}\nAction: {action}"})
                 game_history.append({"role": "user", "content": game_output})
 
                 # Maintain fixed-size history (in pairs of turns)
@@ -160,6 +169,7 @@ def run_game_loop(text_player):
                     game_history.pop(0)
                     game_history.pop(0)
 
+                steps += 1
                 last_action_time = current_time
             else:
                 game_output = "Command not understood. Try again."
